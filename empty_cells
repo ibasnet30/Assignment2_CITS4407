@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Check usage
+if [[ $# -ne 2 ]]; then
+    echo "Usage: ./empty_cells <filename> <separator>"
+    exit 1
+fi
+
+file="$1"
+
