@@ -8,3 +8,30 @@ fi
 
 file="$1"
 
+file="$1"
+sep="$2"
+# Input parameters
+file="$1"
+sep="$2"
+
+# Read header line and number of columns
+IFS="$sep" read -r -a headers < <(head -n 1 "$file")
+num_cols=${#headers[@]}
+
+# Save headers to temp file
+printf "%s\n" "${headers[@]}" > .col_names.tmp
+
+# Count empty cells per column
+awk -F"$sep" -v cols="$num_cols" '
+NR == 1 { next }
+{
+    for (i = 1; i <= cols; i++) {
+        if ($i == "")
+            empty[i]++;
+    }
+}
+END {
+    for (i = 1; i <= cols; i++)
+        print empty[i]+0;
+}
+' "$file" > .col_counts.tmp
