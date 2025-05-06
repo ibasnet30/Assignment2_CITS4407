@@ -1,37 +1,32 @@
 #!/bin/bash
 
-# Check usage
-if [[ $# -ne 2 ]]; then
-    echo "Usage: ./empty_cells <filename> <separator>"
+# Usage: ./empty_cells <filename> <delimiter>
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <filename> <delimiter>"
     exit 1
 fi
 
 file="$1"
+delim="$2"
 
-file="$1"
-sep="$2"
-# Input parameters
-file="$1"
-sep="$2"
-
-# Read header line and number of columns
-IFS="$sep" read -r -a headers < <(head -n 1 "$file")
-num_cols=${#headers[@]}
-
-# Save headers to temp file
-printf "%s\n" "${headers[@]}" > .col_names.tmp
-
-# Count empty cells per column
-awk -F"$sep" -v cols="$num_cols" '
-NR == 1 { next }
+# Convert delimiter to a safe character for AWK (e.g., ; or tab)
+awk -v FS="$delim" '
+NR==1 {
+    for (i = 1; i <= NF; i++) {
+        header[i] = $i
+        count[i] = 0
+    }
+    next
+}
 {
-    for (i = 1; i <= cols; i++) {
-        if ($i == "")
-            empty[i]++;
+    for (i = 1; i <= NF; i++) {
+        if ($i == "") count[i]++
     }
 }
 END {
-    for (i = 1; i <= cols; i++)
-        print empty[i]+0;
+    for (i = 1; i <= length(header); i++) {
+        printf "%s: %d\n", header[i], count[i]
+    }
 }
-' "$file" > .col_counts.tmp
+' "$file"
