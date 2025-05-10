@@ -8,3 +8,10 @@ if [ ! -f "$input_file" ]; then
     exit 1
 fi
 
+awk -F';' -v OFS='\t' '
+NR == 1 {
+    print gensub(/;/, "\t", "g", $0)
+    next
+}
+' "$input_file"
+
