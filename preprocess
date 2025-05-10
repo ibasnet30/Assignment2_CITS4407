@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Usage: ./preprocess input.txt > output.tsv
@@ -10,6 +9,17 @@ if [ ! -f "$input_file" ]; then
 fi
 
 awk -F';' -v OFS='\t' '
+function fix_commas(val) {
+    while (match(val, /[0-9],[0-9]/)) {
+        pre = substr(val, 1, RSTART-1)
+        mid = substr(val, RSTART, 3)
+        post = substr(val, RSTART+3)
+        gsub(",", ".", mid)
+        val = pre mid post
+    }
+    return val
+}
+
 BEGIN {
     max_id = 0
 }
@@ -19,9 +29,32 @@ NR == 1 {
 }
 {
     for (i = 1; i <= NF; i++) {
-        gsub(/\r/, "", $i)
+        gsub(/\r/, "", $i)                       # Remove \r
+        $i = fix_commas($i)                      # Fix decimal commas
+        gsub(/[^\x00-\x7F]/, "", $i)             # Remove non-ASCII
+    }
+
+    # Update max ID if valid
+    if ($1 ~ /^[0-9]+$/ && $1 > max_id) {
+        max_id = $1
+    }
+
+    for (i = 1; i <= NF; i++) {
+        row[NR][i] = $i
+    }
+    row_count = NR
+}
+END {
+    new_id = max_id + 1
+    for (r = 2; r <= row_count; r++) {
+        if (row[r][1] == "") {
+            row[r][1] = new_id++
+        }
+        line = row[r][1]
+        for (i = 2; i <= length(row[r]); i++) {
+            line = line "\t" row[r][i]
+        }
+        print line
     }
 }
 ' "$input_file"
-EOF
-
