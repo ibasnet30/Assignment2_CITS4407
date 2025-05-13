@@ -15,8 +15,3 @@ END {
     if (den==0) print "undefined"; else printf("%.3f\n", num/den);
 }
 ' "$input"
-EOF
-
-chmod +x analysis
-git add analysis
-git commit -m "initial: added basic Pearson correlation between year and rating"
