@@ -1,60 +1,22 @@
+
 #!/bin/bash
-
-# Usage: ./preprocess input.txt > output.tsv
-input_file="$1"
-
-if [ ! -f "$input_file" ]; then
-    echo "Error: File '$input_file' not found."
-    exit 1
-fi
-
-awk -F';' -v OFS='\t' '
-function fix_commas(val) {
-    while (match(val, /[0-9],[0-9]/)) {
-        pre = substr(val, 1, RSTART-1)
-        mid = substr(val, RSTART, 3)
-        post = substr(val, RSTART+3)
-        gsub(",", ".", mid)
-        val = pre mid post
+input="$1"
+awk -F'\t' -v xcol=3 -v ycol=9 '
+BEGIN {sumx=0; sumy=0; sumxy=0; sumx2=0; sumy2=0; n=0}
+NR>1 {
+    x=$xcol; y=$ycol;
+    if(x!="" && y!="") {
+        sumx+=x; sumy+=y; sumxy+=x*y; sumx2+=x*x; sumy2+=y*y; n++;
     }
-    return val
-}
-
-BEGIN {
-    max_id = 0
-}
-NR == 1 {
-    print gensub(/;/, "\t", "g", $0)
-    next
-}
-{
-    for (i = 1; i <= NF; i++) {
-        gsub(/\r/, "", $i)                       # Remove \r
-        $i = fix_commas($i)                      # Fix decimal commas
-        gsub(/[^\x00-\x7F]/, "", $i)             # Remove non-ASCII
-    }
-
-    # Update max ID if valid
-    if ($1 ~ /^[0-9]+$/ && $1 > max_id) {
-        max_id = $1
-    }
-
-    for (i = 1; i <= NF; i++) {
-        row[NR][i] = $i
-    }
-    row_count = NR
 }
 END {
-    new_id = max_id + 1
-    for (r = 2; r <= row_count; r++) {
-        if (row[r][1] == "") {
-            row[r][1] = new_id++
-        }
-        line = row[r][1]
-        for (i = 2; i <= length(row[r]); i++) {
-            line = line "\t" row[r][i]
-        }
-        print line
-    }
+    num = n*sumxy - sumx*sumy;
+    den = sqrt((n*sumx2 - sumx^2)*(n*sumy2 - sumy^2));
+    if (den==0) print "undefined"; else printf("%.3f\n", num/den);
 }
-' "$input_file"
+' "$input"
+EOF
+
+chmod +x analysis
+git add analysis
+git commit -m "initial: added basic Pearson correlation between year and rating"
