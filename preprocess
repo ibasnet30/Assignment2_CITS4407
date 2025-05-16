@@ -1,17 +1,47 @@
-
 #!/bin/bash
+
+# Usage: ./analysis cleaned_file.tsv
 input="$1"
-awk -F'\t' -v xcol=3 -v ycol=9 '
-BEGIN {sumx=0; sumy=0; sumxy=0; sumx2=0; sumy2=0; n=0}
-NR>1 {
-    x=$xcol; y=$ycol;
-    if(x!="" && y!="") {
-        sumx+=x; sumy+=y; sumxy+=x*y; sumx2+=x*x; sumy2+=y*y; n++;
+
+if [[ ! -f $input ]]; then
+    echo "File not found!"
+    exit 1
+fi
+
+# 1. Most popular game mechanics
+echo "The most popular game mechanics is $(tail -n +2 "$input" | cut -f13 | sed 's/, /\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n1 | awk '{for(i=2;i<=NF;++i)printf $i " "; print "found in", $1, "games"}')"
+
+# 2. Most popular game domain
+echo "The most game domain is $(tail -n +2 "$input" | cut -f14 | sed 's/, /\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n1 | awk '{for(i=2;i<=NF;++i)printf $i " "; print "found in", $1, "games"}')"
+
+# 3–4. Correlation function
+correlation() {
+    awk -F'\t' -v xcol="$1" -v ycol="$2" '
+    BEGIN { sumx=0; sumy=0; sumxy=0; sumx2=0; sumy2=0; n=0 }
+    NR > 1 {
+        x = $xcol; y = $ycol
+        if (x != "" && y != "") {
+            sumx += x
+            sumy += y
+            sumxy += x*y
+            sumx2 += x*x
+            sumy2 += y*y
+            n++
+        }
     }
+    END {
+        numerator = (n * sumxy - sumx * sumy)
+        denominator = sqrt((n * sumx2 - sumx^2) * (n * sumy2 - sumy^2))
+        if (denominator == 0) print "undefined"
+        else printf "%.3f\n", numerator / denominator
+    }
+    ' "$input"
 }
-END {
-    num = n*sumxy - sumx*sumy;
-    den = sqrt((n*sumx2 - sumx^2)*(n*sumy2 - sumy^2));
-    if (den==0) print "undefined"; else printf("%.3f\n", num/den);
-}
-' "$input"
+
+# 3. Correlation: Year vs Rating
+echo -n "The correlation between the year of publication and the average rating is "
+correlation 3 9
+
+# 4. Correlation: Complexity vs Rating
+echo -n "The correlation between the complexity of a game and its average rating is "
+correlation 11 9
