@@ -1,17 +1,27 @@
+
 #!/bin/bash
 
 # Usage: ./preprocess input.txt > output.tsv
 input_file="$1"
 
 if [ ! -f "$input_file" ]; then
-    echo "Error: File not found."
+    echo "Error: File '$input_file' not found."
     exit 1
 fi
 
 awk -F';' -v OFS='\t' '
+BEGIN {
+    max_id = 0
+}
 NR == 1 {
     print gensub(/;/, "\t", "g", $0)
     next
 }
+{
+    for (i = 1; i <= NF; i++) {
+        gsub(/\r/, "", $i)
+    }
+}
 ' "$input_file"
+EOF
 
